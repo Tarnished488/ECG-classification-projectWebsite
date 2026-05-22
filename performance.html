@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Analysis — ECG Heart Disease Classifier</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #f0f2f5;
+            color: #2d3748;
+            line-height: 1.7;
+        }
+
+        /* ── SVG icon base ── */
+        .icon {
+            display: inline-block;
+            width: 1em; height: 1em;
+            vertical-align: -0.125em; flex-shrink: 0;
+        }
+        .icon--lg { width: 1.4em; height: 1.4em; }
+        .icon--xl { width: 2.5em; height: 2.5em; }
+
+        /* ── Navigation ── */
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            background: #1a202c; border-bottom: 2px solid #4a5568; padding: 0 20px;
+        }
+        nav .nav-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; gap: 24px; overflow-x: auto;
+        }
+        nav a, nav .nav-brand {
+            color: #cbd5e0; text-decoration: none;
+            font-size: 0.82rem; font-weight: 500; padding: 12px 6px;
+            white-space: nowrap; border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        nav a:hover, nav a:focus { color: #fff; border-bottom-color: #68d391; }
+        nav .nav-brand {
+            font-weight: 700; color: #fff; font-size: 0.9rem;
+            margin-right: auto; letter-spacing: 1px;
+        }
+        nav .nav-brand .icon { color: #68d391; }
+
+        /* ── Header ── */
+        header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white; padding: 3rem 0; text-align: center;
+            border-bottom: 6px solid #4a5568;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 25px; }
+
+        h1 {
+            font-size: 2.2rem; font-weight: 700;
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+        h2 {
+            font-size: 1.4rem; color: #2d3748;
+            border-left: 6px solid #4a5568; padding-left: 18px;
+            margin: 3rem 0 1.5rem 0;
+            display: flex; align-items: center; gap: 12px;
+        }
+        h2 .icon { color: #4a5568; }
+        h3 {
+            font-size: 1.05rem; color: #2d3748;
+            margin: 2rem 0 0.8rem 0;
+            display: flex; align-items: center; gap: 8px;
+        }
+        h3 .icon { color: #4a5568; }
+
+        .section {
+            background: white; margin: 28px 0; padding: 38px;
+            border: 1px solid #cbd5e0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        /* ── Image gallery grid ── */
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 28px;
+            margin-top: 20px;
+        }
+        .gallery-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+        .gallery-item:hover {
+            transform: translateY(-3px);
+            border-color: #4a5568;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+        }
+        .gallery-caption {
+            padding: 14px 18px;
+            font-size: 0.82rem;
+            color: #4a5568;
+            border-top: 1px solid #e2e8f0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .gallery-caption .icon { flex-shrink: 0; }
+
+        /* ── Full-width images (force plots are wide) ── */
+        .gallery-item--wide {
+            grid-column: 1 / -1;
+            max-width: 100%;
+        }
+
+        /* ── Lightbox ── */
+        .lightbox {
+            display: none;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92);
+            z-index: 200;
+            justify-content: center; align-items: center;
+            flex-direction: column;
+            cursor: pointer;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox img {
+            max-width: 95vw; max-height: 85vh;
+            object-fit: contain;
+            cursor: default;
+        }
+        .lightbox-close {
+            position: absolute; top: 20px; right: 28px;
+            font-size: 2rem; color: #fff; cursor: pointer;
+            width: 44px; height: 44px; display: flex;
+            align-items: center; justify-content: center;
+            border: 2px solid #fff; background: transparent;
+            font-family: 'Roboto Mono', monospace;
+            transition: all 0.2s;
+        }
+        .lightbox-close:hover { background: #fff; color: #1a202c; }
+        .lightbox-caption {
+            color: #cbd5e0; font-size: 0.82rem;
+            margin-top: 16px; text-align: center; max-width: 700px;
+        }
+
+        /* ── Summary stats ── */
+        .stats-row {
+            display: flex; flex-wrap: wrap; gap: 16px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #1a202c; color: #fff;
+            padding: 18px 24px; flex: 1; min-width: 160px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8rem; font-weight: 700; display: flex;
+            align-items: center; justify-content: center; gap: 8px;
+        }
+        .stat-label { font-size: 0.75rem; opacity: 0.7; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .back-link {
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 16px; font-size: 0.85rem;
+            color: #2b6cb0; text-decoration: none;
+            border-bottom: 1px dotted #2b6cb0;
+        }
+        .back-link:hover { color: #1a202c; border-bottom-style: solid; }
+
+        ul { padding-left: 24px; }
+        ul li { margin: 6px 0; font-size: 0.9rem; }
+
+        .footer {
+            text-align: center; padding: 45px 0; color: #64748b;
+            font-size: 0.9rem; border-top: 1px solid #cbd5e0; margin-top: 60px;
+        }
+        .footer a { color: #64748b; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+
+        @media (max-width: 700px) {
+            .gallery { grid-template-columns: 1fr; }
+            h1 { font-size: 1.4rem; letter-spacing: 1px; }
+            .stats-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════ SVG ICON SPRITE ═══════════════ -->
+<svg style="display:none;" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <!-- Reuse key icons from main page -->
+    <symbol id="icon-ecg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 13h3l1.5-4 3 10 2-6 1.5 3H22"/>
+        <path d="M12 2v3M12 19v3M2 12h0M22 12h0" stroke-width="1"/>
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M15 6l-6 6 6 6"/>
+    </symbol>
+    <symbol id="icon-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M6 15l6-6 6 6"/>
+    </symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M9 6l6 6-6 6"/>
+    </symbol>
+    <symbol id="icon-chart-bar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M4 20V10M10 20V5M16 20v-6M22 20v-4"/>
+        <path d="M1 20h22" stroke-width="1.5"/>
+    </symbol>
+    <symbol id="icon-search-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="10" cy="10" r="7"/>
+        <path d="M7 11l2-3 2 2 1-4M15.5 15.5l5 5"/>
+    </symbol>
+    <symbol id="icon-bullseye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="5"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <ellipse cx="12" cy="5" rx="8" ry="3"/>
+        <path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/>
+        <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>
+    </symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15 9 22 9 16 14 18 22 12 17 6 22 8 14 2 9 9 9"/>
+    </symbol>
+    <symbol id="icon-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="2" y="2" width="8" height="8" rx="1"/>
+        <rect x="14" y="2" width="8" height="8" rx="1"/>
+        <rect x="2" y="14" width="8" height="8" rx="1"/>
+        <rect x="14" y="14" width="8" height="8" rx="1"/>
+    </symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 17v-6M12 7v1"/>
+    </symbol>
+    <symbol id="icon-zoom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="10" cy="10" r="7"/>
+        <path d="M15 15l6 6M10 7v6M7 10h6"/>
+    </symbol>
+    <symbol id="icon-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="2" y="3" width="20" height="18" rx="2"/>
+        <circle cx="8" cy="9" r="1.5"/>
+        <path d="M2 16l5-5 4 4 3-3 8 6"/>
+    </symbol>
+    <symbol id="icon-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 3a6 6 0 0 0-6 6c0 2 .5 3 1 4s1 2 1 3v2h8v-2c0-1 .5-2 1-3s1-2 1-4a6 6 0 0 0-6-6z"/>
+        <path d="M9 3C6 3 3 6 5 10M15 3c3 0 6 3 4 7M9 11h2M13 11h2"/>
+    </symbol>
+    <symbol id="icon-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/>
+    </symbol>
+    <symbol id="icon-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 2L2 7v10l10 5 10-5V7z"/>
+        <circle cx="8" cy="10" r="1.5"/>
+    </symbol>
+    <symbol id="icon-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 22 7 12 12 2 7 12 2"/>
+        <polyline points="2 12 12 17 22 12"/>
+        <polyline points="2 17 12 22 22 17"/>
+    </symbol>
+</svg>
+
+<!-- ═══════════════ NAVIGATION ═══════════════ -->
+<nav>
+    <div class="nav-inner">
+        <span class="nav-brand">
+            <svg class="icon"><use href="#icon-ecg"/></svg>
+            Performance Analysis
+        </span>
+        <a href="#overview"><svg class="icon"><use href="#icon-info"/></svg> Overview</a>
+        <a href="#shap-ds1"><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP DS1</a>
+        <a href="#shap-ds2"><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP DS2</a>
+        <a href="index.html"><svg class="icon"><use href="#icon-arrow-left"/></svg> Back to Home</a>
+    </div>
+</nav>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header>
+    <div class="container">
+        <h1>Performance &amp; Interpretability Analysis</h1>
+        <p style="margin-top:12px;font-size:1.05rem;opacity:0.85;">
+            <svg class="icon"><use href="#icon-search-chart"/></svg> SHAP (SHapley Additive exPlanations) Visualizations
+        </p>
+        <p style="margin-top:6px;font-size:0.82rem;opacity:0.6;">
+            <svg class="icon"><use href="#icon-database"/></svg> MIT-BIH Arrhythmia Database &bull; DS1 Training + DS2 Test Set
+        </p>
+    </div>
+</header>
+
+<div class="container">
+
+<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<div class="section" id="overview">
+    <h2><svg class="icon icon--lg"><use href="#icon-chart-bar"/></svg> PERFORMANCE OVERVIEW</h2>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value"><svg class="icon icon--xl"><use href="#icon-bullseye"/></svg> 95.92%</div>
+            <div class="stat-label">Accuracy on DS2</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">0.947</div>
+            <div class="stat-label">F1 Score (Abnormal)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">0.965</div>
+            <div class="stat-label">Recall (Abnormal)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">0.987</div>
+            <div class="stat-label">AUC</div>
+        </div>
+    </div>
+
+    <p style="margin-top:20px;">
+        <strong>Best Model:</strong> Logistic Regression (C=0.5, L2 penalty) trained with SMOTE oversampling.
+        Evaluation on <strong>DS2 test set</strong> (18 unseen patient records) ensures realistic cross-patient generalization.
+    </p>
+
+    <h3><svg class="icon"><use href="#icon-info"/></svg> What is SHAP?</h3>
+    <p>
+        SHAP (SHapley Additive exPlanations) is a game-theoretic approach to explain machine learning model predictions.
+        Each feature is assigned an importance value (<em>SHAP value</em>) representing its contribution to pushing the
+        prediction away from the base value. Positive SHAP values push toward "abnormal" classification; negative values
+        push toward "normal."
+    </p>
+
+    <h3><svg class="icon"><use href="#icon-tag"/></svg> Chart Types Explained</h3>
+    <ul>
+        <li><strong>Summary Plot</strong> — Each dot is one prediction. Color = feature value (red=high, blue=low). X-axis = SHAP impact. Top features = most important.</li>
+        <li><strong>Bar Plot</strong> — Mean absolute SHAP value per feature. Taller bar = more important globally.</li>
+        <li><strong>Dependence Plot</strong> — SHAP value vs. actual feature value for a single feature. Reveals the direction and shape of feature influence.</li>
+        <li><strong>Force Plot</strong> — Single-instance explanation. Red arrows push toward abnormal, blue toward normal. Shows exactly which features drove one specific prediction.</li>
+    </ul>
+
+    <a href="index.html" class="back-link"><svg class="icon"><use href="#icon-arrow-left"/></svg> Back to Home Page</a>
+</div>
+
+<!-- ═══════════════ SHAP — DS1 TRAINING SET ═══════════════ -->
+<div class="section" id="shap-ds1">
+    <h2><svg class="icon icon--lg"><use href="#icon-search-chart"/></svg> SHAP ANALYSIS — DS1 TRAINING SET</h2>
+    <p style="color:#4a5568;margin-bottom:8px;">
+        SHAP analysis on the DS1 training set (18 records). Model: Logistic Regression with SMOTE.
+        Features are from the combined morphology pipeline: Wavelet + HOS + Distance + Amplitude + RR.
+    </p>
+
+    <!-- Global Plots -->
+    <h3><svg class="icon"><use href="#icon-layers"/></svg> Global Feature Importance</h3>
+
+    <div class="gallery">
+        <div class="gallery-item">
+            <img src="images/shap_analysis/shap_summary.png" alt="SHAP Summary Plot — DS1" loading="lazy" onclick="openLightbox(this.src, 'SHAP Summary Plot — Each dot = one prediction; color = feature value; top features have the largest SHAP impact.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-star"/></svg> SHAP Summary Plot — Global feature impact distribution
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis/shap_bar.png" alt="SHAP Bar Plot — DS1" loading="lazy" onclick="openLightbox(this.src, 'SHAP Bar Plot — Mean |SHAP| per feature, ranked by global importance.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-chart-bar"/></svg> SHAP Bar Plot — Mean absolute SHAP value ranking
+            </div>
+        </div>
+    </div>
+
+    <!-- Dependence Plots -->
+    <h3><svg class="icon"><use href="#icon-filter"/></svg> Feature Dependence Plots (Top 5)</h3>
+    <p style="margin-bottom:12px;color:#4a5568;font-size:0.85rem;">
+        Shows how each feature's SHAP value changes with its actual value.
+        Top features identified: WAV_S1_C11, WAV_S1_C12 (wavelet coefficients), RR_Ratio, RR_Local, RR_Global (RR interval features).
+    </p>
+
+    <div class="gallery">
+        <div class="gallery-item">
+            <img src="images/shap_analysis/shap_dependence_WAV_S1_C11.png" alt="SHAP Dependence — WAV_S1_C11" loading="lazy" onclick="openLightbox(this.src, 'Wavelet coefficient C11 (Signal 1). Higher values push toward abnormal classification.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — WAV_S1_C11 (Wavelet Coeff #11)
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis/shap_dependence_WAV_S1_C12.png" alt="SHAP Dependence — WAV_S1_C12" loading="lazy" onclick="openLightbox(this.src, 'Wavelet coefficient C12 (Signal 1). Strong nonlinear relationship with prediction.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — WAV_S1_C12 (Wavelet Coeff #12)
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis/shap_dependence_RR_Ratio.png" alt="SHAP Dependence — RR_Ratio" loading="lazy" onclick="openLightbox(this.src, 'RR_Ratio = pre_R / local_R. Ratio deviations are a key arrhythmia indicator.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — RR_Ratio (Pre/Local RR Ratio)
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis/shap_dependence_RR_Local.png" alt="SHAP Dependence — RR_Local" loading="lazy" onclick="openLightbox(this.src, 'RR_Local: mean RR interval over the preceding 10 beats. Short local RR strongly indicates abnormality.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — RR_Local (10-Beat Local Average)
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis/shap_dependence_RR_Global.png" alt="SHAP Dependence — RR_Global" loading="lazy" onclick="openLightbox(this.src, 'RR_Global: mean RR interval over the preceding 5 minutes. Captures long-term heart rate context.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — RR_Global (5-Minute Global Average)
+            </div>
+        </div>
+    </div>
+
+    <!-- Force Plots -->
+    <h3><svg class="icon"><use href="#icon-brain"/></svg> Individual Prediction Explanations (Force Plots)</h3>
+    <p style="margin-bottom:12px;color:#4a5568;font-size:0.85rem;">
+        Force plots show exactly which features pushed a specific prediction toward "Normal" (blue) or "Abnormal" (red).
+        The base value is the model's expected output; the final prediction is the sum of all SHAP contributions.
+    </p>
+
+    <div class="gallery">
+        <div class="gallery-item gallery-item--wide">
+            <img src="images/shap_analysis/shap_force_instance_0.png" alt="SHAP Force Plot — Instance 0" loading="lazy" onclick="openLightbox(this.src, 'Force Plot — Instance 0. Red features push toward abnormal, blue toward normal. The balance determines the final prediction.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-brain"/></svg> Force Plot — Instance #0
+            </div>
+        </div>
+        <div class="gallery-item gallery-item--wide">
+            <img src="images/shap_analysis/shap_force_instance_1.png" alt="SHAP Force Plot — Instance 1" loading="lazy" onclick="openLightbox(this.src, 'Force Plot — Instance 1.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-brain"/></svg> Force Plot — Instance #1
+            </div>
+        </div>
+        <div class="gallery-item gallery-item--wide">
+            <img src="images/shap_analysis/shap_force_instance_2.png" alt="SHAP Force Plot — Instance 2" loading="lazy" onclick="openLightbox(this.src, 'Force Plot — Instance 2.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-brain"/></svg> Force Plot — Instance #2
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ SHAP — DS2 TEST SET ═══════════════ -->
+<div class="section" id="shap-ds2">
+    <h2><svg class="icon icon--lg"><use href="#icon-search-chart"/></svg> SHAP ANALYSIS — DS2 TEST SET</h2>
+    <p style="color:#4a5568;margin-bottom:8px;">
+        SHAP analysis on the held-out DS2 test set (18 records, strictly unseen patients).
+        This evaluates whether the model's interpretability patterns generalize to new patients.
+    </p>
+
+    <!-- Global Plots -->
+    <h3><svg class="icon"><use href="#icon-layers"/></svg> Global Feature Importance (Test Set)</h3>
+
+    <div class="gallery">
+        <div class="gallery-item">
+            <img src="images/shap_analysis_test/shap_summary.png" alt="SHAP Summary Plot — DS2 Test" loading="lazy" onclick="openLightbox(this.src, 'SHAP Summary Plot (DS2 Test Set) — Feature importance distribution on unseen patients.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-star"/></svg> SHAP Summary Plot — Test set global feature impact
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis_test/shap_bar.png" alt="SHAP Bar Plot — DS2 Test" loading="lazy" onclick="openLightbox(this.src, 'SHAP Bar Plot (DS2 Test Set) — Mean |SHAP| ranking on unseen patients.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-chart-bar"/></svg> SHAP Bar Plot — Test set feature ranking
+            </div>
+        </div>
+    </div>
+
+    <!-- Dependence Plots -->
+    <h3><svg class="icon"><use href="#icon-filter"/></svg> Feature Dependence Plots (Test Set Top Features)</h3>
+
+    <div class="gallery">
+        <div class="gallery-item">
+            <img src="images/shap_analysis_test/shap_dependence_f5.png" alt="SHAP Dependence — Feature 5 (DS2)" loading="lazy" onclick="openLightbox(this.src, 'Dependence Plot — Feature 5 on the DS2 test set.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — Feature 5 (Test Set)
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis_test/shap_dependence_f10.png" alt="SHAP Dependence — Feature 10 (DS2)" loading="lazy" onclick="openLightbox(this.src, 'Dependence Plot — Feature 10 on the DS2 test set.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — Feature 10 (Test Set)
+            </div>
+        </div>
+        <div class="gallery-item">
+            <img src="images/shap_analysis_test/shap_dependence_f24.png" alt="SHAP Dependence — Feature 24 (DS2)" loading="lazy" onclick="openLightbox(this.src, 'Dependence Plot — Feature 24 on the DS2 test set.')">
+            <div class="gallery-caption">
+                <svg class="icon"><use href="#icon-filter"/></svg> Dependence Plot — Feature 24 (Test Set)
+            </div>
+        </div>
+    </div>
+
+    <a href="index.html" class="back-link"><svg class="icon"><use href="#icon-arrow-left"/></svg> Back to Home Page</a>
+</div>
+
+</div> <!-- /container -->
+
+<!-- ═══════════════ LIGHTBOX ═══════════════ -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()" title="Close">&times;</button>
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<div class="footer">
+    <p><svg class="icon"><use href="#icon-ecg"/></svg> Interpretable ECG Classification System — Performance Analysis <svg class="icon"><use href="#icon-ecg"/></svg></p>
+    <p style="margin-top:12px;font-size:0.82rem;">
+        <a href="index.html"><svg class="icon"><use href="#icon-arrow-left"/></svg> Back to Home</a>
+        &nbsp;&bull;&nbsp;
+        <a href="#overview"><svg class="icon"><use href="#icon-arrow-up"/></svg> Back to Top</a>
+    </p>
+</div>
+
+<script>
+    function openLightbox(src, caption) {
+        document.getElementById('lightbox-img').src = src;
+        document.getElementById('lightbox-caption').textContent = caption || '';
+        document.getElementById('lightbox').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeLightbox();
+    });
+</script>
+
+</body>
+</html>
