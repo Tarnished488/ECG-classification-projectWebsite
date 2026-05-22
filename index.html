@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Heart Disease Classifier — Interpretable ML for Arrhythmia Detection</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #f0f2f5;
+            color: #2d3748;
+            line-height: 1.7;
+        }
+
+        /* ── Inline SVG icon base ── */
+        .icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+            flex-shrink: 0;
+        }
+        .icon--lg  { width: 1.4em; height: 1.4em; }
+        .icon--xl  { width: 2.5em; height: 2.5em; }
+        .icon--2xl { width: 3.5em; height: 3.5em; }
+
+        /* ── Navigation ── */
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            background: #1a202c; border-bottom: 2px solid #4a5568; padding: 0 20px;
+        }
+        nav .nav-inner {
+            max-width: 1150px; margin: 0 auto;
+            display: flex; align-items: center; gap: 24px; overflow-x: auto;
+        }
+        nav a {
+            color: #cbd5e0; text-decoration: none;
+            font-size: 0.82rem; font-weight: 500; padding: 12px 6px;
+            white-space: nowrap; border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        nav a:hover, nav a:focus { color: #fff; border-bottom-color: #68d391; }
+        nav .nav-brand {
+            font-weight: 700; color: #fff; font-size: 0.9rem;
+            margin-right: auto; letter-spacing: 1px;
+            display: flex; align-items: center; gap: 7px;
+        }
+        nav .nav-brand .icon { color: #68d391; }
+
+        /* ── Header ── */
+        header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white; padding: 3.5rem 0; text-align: center;
+            border-bottom: 6px solid #4a5568;
+        }
+        header .header-icon { display: block; margin: 0 auto 16px; opacity: 0.7; }
+
+        .container { max-width: 1150px; margin: 0 auto; padding: 0 25px; }
+
+        h1 {
+            font-size: 2.55rem; font-weight: 700;
+            letter-spacing: 3px; text-transform: uppercase;
+        }
+        h2 {
+            font-size: 1.55rem; color: #2d3748;
+            border-left: 6px solid #4a5568; padding-left: 18px;
+            margin: 3rem 0 1.8rem 0;
+            display: flex; align-items: center; gap: 12px;
+        }
+        h2 .icon { color: #4a5568; }
+
+        .section {
+            background: white; margin: 28px 0; padding: 38px;
+            border: 1px solid #cbd5e0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 25px; margin-top: 25px;
+        }
+
+        .card {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            padding: 28px; transition: all 0.3s;
+        }
+        .card > strong {
+            display: flex; align-items: center; gap: 8px; font-size: 0.95rem;
+        }
+        .card > strong .icon { color: #4a5568; }
+        .card:hover { transform: translateY(-3px); border-color: #4a5568; }
+
+        /* ── Expandable tech details ── */
+        .tech-detail {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            margin-top: 16px; transition: all 0.25s;
+        }
+        .tech-detail:hover { border-color: #4a5568; }
+        .tech-summary {
+            cursor: pointer; padding: 18px 24px;
+            font-weight: 600; font-size: 0.95rem; color: #2d3748;
+            list-style: none; display: flex; align-items: center; gap: 12px;
+            user-select: none;
+        }
+        .tech-summary .icon { color: #4a5568; }
+        .tech-summary::-webkit-details-marker { display: none; }
+        .tech-summary::before {
+            content: "+"; display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border: 1px solid #4a5568;
+            font-weight: 700; font-size: 1rem; flex-shrink: 0; transition: all 0.2s;
+        }
+        details[open] > .tech-summary::before {
+            content: "\2212"; background: #2d3748; color: #fff;
+        }
+
+        .tech-body { padding: 0 24px 24px 24px; }
+        .tech-body h4 {
+            margin: 16px 0 8px 0; color: #4a5568;
+            font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .tech-body ul { padding-left: 20px; margin-bottom: 12px; }
+        .tech-body li { margin: 6px 0; font-size: 0.9rem; }
+
+        pre {
+            background: #1a202c; color: #e2e8f0;
+            padding: 16px 20px; border-radius: 3px; overflow-x: auto;
+            font-size: 0.78rem; line-height: 1.55;
+            margin: 10px 0 16px 0; border-left: 3px solid #68d391;
+        }
+        code { font-family: 'Roboto Mono', monospace; }
+
+        .highlight-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .highlight-badge {
+            background: #2d3748; color: #fff;
+            padding: 6px 14px; font-size: 0.82rem; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .highlight-badge .icon { opacity: 0.7; }
+
+        .jump-to { font-size: 0.85rem; margin-top: 4px; }
+        .jump-to a {
+            color: #2b6cb0; text-decoration: none;
+            border-bottom: 1px dotted #2b6cb0;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .jump-to a:hover { color: #1a202c; border-bottom-style: solid; }
+
+        ol { padding-left: 28px; }
+        ol li { margin: 12px 0; padding-left: 4px; }
+        ul { padding-left: 28px; }
+        ul li { margin: 10px 0; }
+        ul li a, ol li a {
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+
+        .footer {
+            text-align: center; padding: 45px 0; color: #64748b;
+            font-size: 0.9rem; border-top: 1px solid #cbd5e0; margin-top: 60px;
+        }
+        .footer a { color: #64748b; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+
+        .inline-icon { display: inline-flex; align-items: center; gap: 3px; }
+
+        @media (max-width: 700px) {
+            nav .nav-inner { gap: 12px; }
+            nav a { font-size: 0.72rem; }
+            h1 { font-size: 1.6rem; letter-spacing: 1px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════ SVG ICON SPRITE ═══════════════ -->
+<svg style="display:none;" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+
+    <!-- ═══ Navigation / Section Icons ═══ -->
+
+    <!-- ECG heartbeat pulse — the central brand icon -->
+    <symbol id="icon-ecg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 13h3l1.5-4 3 10 2-6 1.5 3H22"/>
+        <path d="M12 2v3M12 19v3M2 12h0M22 12h0" stroke-width="1"/>
+    </symbol>
+
+    <!-- Crosshair / target -->
+    <symbol id="icon-crosshair" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+    </symbol>
+
+    <!-- Gear / settings -->
+    <symbol id="icon-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/>
+    </symbol>
+
+    <!-- CPU / microchip -->
+    <symbol id="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="6" y="6" width="12" height="12" rx="1"/>
+        <path d="M9 6V3M15 6V3M9 18v3M15 18v3M3 9h3M18 9h3M3 15h3M18 15h3"/>
+        <path d="M9 9h2v2H9zM13 9h2v2h-2zM9 13h2v2H9zM13 13h2v2h-2z"/>
+    </symbol>
+
+    <!-- Numbered list -->
+    <symbol id="icon-list-num" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M4 5h2v4H4z"/>
+        <path d="M7 5h14M7 9h14M7 15h14M7 19h14"/>
+        <circle cx="4" cy="16" r="2.5"/>
+    </symbol>
+
+    <!-- Lightbulb -->
+    <symbol id="icon-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M9 20h6M10 22h4"/>
+        <path d="M12 2a7 7 0 0 0-3 13.3V17a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1.7A7 7 0 0 0 12 2z"/>
+        <path d="M8 12l1.5 1.5M16 12l-1.5 1.5" stroke-width="1.5"/>
+    </symbol>
+
+    <!-- Chart bar / performance -->
+    <symbol id="icon-chart-bar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M4 20V10M10 20V5M16 20v-6M22 20v-4"/>
+        <path d="M1 20h22" stroke-width="1.5"/>
+    </symbol>
+
+    <!-- Stacked layers -->
+    <symbol id="icon-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 22 7 12 12 2 7 12 2"/>
+        <polyline points="2 12 12 17 22 12"/>
+        <polyline points="2 17 12 22 22 17"/>
+    </symbol>
+
+    <!-- Info circle -->
+    <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 17v-6M12 7v1"/>
+    </symbol>
+
+    <!-- ═══ Tech Detail Icons ═══ -->
+
+    <!-- Wrench -->
+    <symbol id="icon-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M14 14l-9 9-3-3 9-9"/>
+        <circle cx="17" cy="7" r="5"/>
+        <path d="M14.5 9.5L17 7"/>
+    </symbol>
+
+    <!-- Waveform / sine -->
+    <symbol id="icon-waveform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M2 12h3l2-8 3 16 2-8 3 11 2-4 2-3 3-4"/>
+        <path d="M1 20h22" stroke-width="1"/>
+    </symbol>
+
+    <!-- Filter / funnel -->
+    <symbol id="icon-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/>
+    </symbol>
+
+    <!-- Robot / AI -->
+    <symbol id="icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="4" y="8" width="16" height="12" rx="3"/>
+        <circle cx="9" cy="14" r="1.5"/>
+        <circle cx="15" cy="14" r="1.5"/>
+        <path d="M9 17h6M12 5v3M8 5h8"/>
+    </symbol>
+
+    <!-- Magnifying glass + chart overlay -->
+    <symbol id="icon-search-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="10" cy="10" r="7"/>
+        <path d="M7 11l2-3 2 2 1-4M15.5 15.5l5 5"/>
+    </symbol>
+
+    <!-- Database cylinders -->
+    <symbol id="icon-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <ellipse cx="12" cy="5" rx="8" ry="3"/>
+        <path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/>
+        <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>
+    </symbol>
+
+    <!-- Hard drive / storage -->
+    <symbol id="icon-hdd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <circle cx="8" cy="12" r="1.5"/>
+        <circle cx="16" cy="12" r="1.5"/>
+        <path d="M6 4V3M18 4V3"/>
+    </symbol>
+
+    <!-- ═══ Tech Body Label Icons ═══ -->
+
+    <!-- Cube / box (features) -->
+    <symbol id="icon-cube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L3 7v10l9 5 9-5V7z"/>
+        <path d="M3 7l9 5M21 7l-9 5M12 12v10"/>
+    </symbol>
+
+    <!-- Code brackets -->
+    <symbol id="icon-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M8 5L2 12l6 7M16 5l6 7-6 7"/>
+    </symbol>
+
+    <!-- Tag / label -->
+    <symbol id="icon-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 2L2 7v10l10 5 10-5V7z"/>
+        <circle cx="8" cy="10" r="1.5"/>
+    </symbol>
+
+    <!-- Image / picture -->
+    <symbol id="icon-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="2" y="3" width="20" height="18" rx="2"/>
+        <circle cx="8" cy="9" r="1.5"/>
+        <path d="M2 16l5-5 4 4 3-3 8 6"/>
+    </symbol>
+
+    <!-- ═══ Card / Metric Icons ═══ -->
+
+    <!-- Star -->
+    <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15 9 22 9 16 14 18 22 12 17 6 22 8 14 2 9 9 9"/>
+    </symbol>
+
+    <!-- Trophy -->
+    <symbol id="icon-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M6 3h12v4a6 6 0 0 1-12 0V3z"/>
+        <path d="M6 11a5 5 0 0 0-4 4v1h4M18 11a5 5 0 0 1 4 4v1h-4"/>
+        <path d="M9 21h6M12 17v4"/>
+    </symbol>
+
+    <!-- Grid / table -->
+    <symbol id="icon-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="2" y="2" width="8" height="8" rx="1"/>
+        <rect x="14" y="2" width="8" height="8" rx="1"/>
+        <rect x="2" y="14" width="8" height="8" rx="1"/>
+        <rect x="14" y="14" width="8" height="8" rx="1"/>
+    </symbol>
+
+    <!-- Check square -->
+    <symbol id="icon-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M7 12l3 3 7-7"/>
+    </symbol>
+
+    <!-- Ruler -->
+    <symbol id="icon-ruler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="4" width="18" height="16" rx="2"/>
+        <path d="M7 8v4M11 6v6M15 8v4M19 6v6"/>
+    </symbol>
+
+    <!-- Balance scale -->
+    <symbol id="icon-balance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 2v20M4 14l8-4 8 4"/>
+        <path d="M4 14v4l8 2 8-2v-4"/>
+        <circle cx="12" cy="17" r="1"/>
+    </symbol>
+
+    <!-- Scissors / cut -->
+    <symbol id="icon-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="6" cy="6" r="3"/>
+        <circle cx="6" cy="18" r="3"/>
+        <path d="M8.5 8.5L16 2M8.5 15.5L16 22M8.5 8.5l6-6M8.5 15.5l6 6"/>
+    </symbol>
+
+    <!-- ═══ Tech Stack Badge Icons ═══ -->
+
+    <!-- Python -->
+    <symbol id="icon-python" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 4c-3 0-4 1-4 3v2h5v1H4c-2 0-3 2-3 4s1 3 3 3h1v-2c0-2 2-2 3-2h4c2 0 3-2 3-4s-2-3-4-3H8z"/>
+        <path d="M16 20c3 0 4-1 4-3v-2h-5v-1h5c2 0 3-2 3-4s-1-3-3-3h-1v2c0 2-2 2-3 2h-4c-2 0-3 2-3 4s2 3 4 3h3z"/>
+        <circle cx="8.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+        <circle cx="15.5" cy="17.5" r="1" fill="currentColor" stroke="none"/>
+    </symbol>
+
+    <!-- Tree -->
+    <symbol id="icon-tree" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 22V9M12 9L7 15h3l-3 4h10l-3-4h3z"/>
+        <circle cx="12" cy="5" r="3"/>
+    </symbol>
+
+    <!-- Lightning bolt -->
+    <symbol id="icon-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 11 14 10 22 21 10 13 10"/>
+    </symbol>
+
+    <!-- Pie chart -->
+    <symbol id="icon-pie" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 3v9l-7.8 4.5"/>
+    </symbol>
+
+    <!-- Floppy / save -->
+    <symbol id="icon-floppy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 2v20h16V7l-5-5H4z"/>
+        <rect x="7" y="13" width="10" height="9"/>
+        <rect x="7" y="2" width="2" height="4"/>
+        <rect x="11" y="2" width="6" height="4"/>
+    </symbol>
+
+    <!-- Spinner / progress -->
+    <symbol id="icon-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 2a10 10 0 1 0 10 10"/>
+        <path d="M22 12h0" stroke-width="3"/>
+    </symbol>
+
+    <!-- Water droplet (wavelet) -->
+    <symbol id="icon-water" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 2C8 7 4 11 4 15a8 8 0 0 0 16 0c0-4-4-8-8-13z"/>
+        <path d="M8 14a4 4 0 0 0 8 0" stroke-width="1.5"/>
+    </symbol>
+
+    <!-- Chart simple (HOS) -->
+    <symbol id="icon-chart-simple" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M3 3v18h18"/>
+        <path d="M7 15l4-6 3 4 4-8"/>
+    </symbol>
+
+    <!-- Arrow up-right (amplitude) -->
+    <symbol id="icon-arrow-upright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M7 17L17 7M8 7h9v9"/>
+    </symbol>
+
+    <!-- ═══ Arrows / UI ═══ -->
+
+    <symbol id="icon-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M6 9l6 6 6-6"/>
+    </symbol>
+
+    <symbol id="icon-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M6 15l6-6 6 6"/>
+    </symbol>
+
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M9 6l6 6-6 6"/>
+    </symbol>
+
+    <!-- Hand pointer (click) -->
+    <symbol id="icon-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M13 2L7 12v4l3 5h8l4-7V9a2 2 0 0 0-4 0v-3a2 2 0 0 0-4 0"/>
+        <path d="M13 2v4a2 2 0 0 1-4 0V6"/>
+    </symbol>
+
+    <!-- Brain -->
+    <symbol id="icon-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 3a6 6 0 0 0-6 6c0 2 .5 3 1 4s1 2 1 3v2h8v-2c0-1 .5-2 1-3s1-2 1-4a6 6 0 0 0-6-6z"/>
+        <path d="M9 3C6 3 3 6 5 10M15 3c3 0 6 3 4 7"/>
+        <path d="M9 11h2M13 11h2"/>
+    </symbol>
+
+    <!-- Bullseye (accuracy) -->
+    <symbol id="icon-bullseye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="5"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+    </symbol>
+
+    <!-- Star half (F1) -->
+    <symbol id="icon-star-half" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15 9 22 9 16 14 18 22 12 17 6 22 8 14 2 9 9 9"/>
+        <path d="M12 2v15l-6 5 2-8-6-5h7z" fill="currentColor" fill-opacity="0.3"/>
+    </symbol>
+
+    <!-- Search / magnifier -->
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="10" cy="10" r="7"/>
+        <path d="M15 15l6 6"/>
+    </symbol>
+
+    <!-- Chart area (AUC) -->
+    <symbol id="icon-chart-area" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M3 3v18h18"/>
+        <path d="M3 15l5-7 4 5 5-9 4 6v5H3z" fill="currentColor" fill-opacity="0.2" stroke-width="1.5"/>
+    </symbol>
+
+    <!-- Table (NumPy) -->
+    <symbol id="icon-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="2" y="3" width="20" height="18" rx="1"/>
+        <path d="M2 9h20M2 15h20M8 3v18M16 3v18"/>
+    </symbol>
+
+    <!-- Ruler horizontal (distance) -->
+    <symbol id="icon-ruler-h" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="2" y="7" width="20" height="10" rx="1"/>
+        <path d="M6 10v4M10 8v6M14 10v4M18 8v6"/>
+    </symbol>
+
+</svg>
+
+<!-- ═══════════════ NAVIGATION ═══════════════ -->
+<nav>
+    <div class="nav-inner">
+        <span class="nav-brand">
+            <svg class="icon icon--lg"><use href="#icon-ecg"/></svg>
+            ECG Classifier
+        </span>
+        <a href="#purpose"><svg class="icon"><use href="#icon-crosshair"/></svg> Purpose</a>
+        <a href="#method"><svg class="icon"><use href="#icon-gear"/></svg> Method</a>
+        <a href="#core-tech"><svg class="icon"><use href="#icon-chip"/></svg> Core Tech</a>
+        <a href="#procedure"><svg class="icon"><use href="#icon-list-num"/></svg> Procedure</a>
+        <a href="#innovation"><svg class="icon"><use href="#icon-bulb"/></svg> Innovation</a>
+        <a href="#performance"><svg class="icon"><use href="#icon-chart-bar"/></svg> Performance</a>
+    </div>
+</nav>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header>
+    <div class="container">
+        <svg class="icon icon--2xl header-icon"><use href="#icon-ecg"/></svg>
+        <h1>ECG Heart Disease Classifier</h1>
+        <p style="margin-top:12px;font-size:1.15rem;opacity:0.85;">
+            <span class="inline-icon"><svg class="icon"><use href="#icon-brain"/></svg> Interpretable Machine Learning for Abnormal Heartbeat Detection</span>
+        </p>
+        <p style="margin-top:8px;font-size:0.85rem;opacity:0.6;">
+            <span class="inline-icon"><svg class="icon"><use href="#icon-database"/></svg> MIT-BIH Arrhythmia Database</span>
+            &bull;
+            <span class="inline-icon"><svg class="icon"><use href="#icon-bullseye"/></svg> 95.92% Accuracy on DS2</span>
+            &bull;
+            <span class="inline-icon"><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP Explainability</span>
+        </p>
+    </div>
+</header>
+
+<div class="container">
+
+<!-- ═══════════════ 01 PROJECT PURPOSE ═══════════════ -->
+<div class="section" id="purpose">
+    <h2><svg class="icon icon--lg"><use href="#icon-crosshair"/></svg> 01 PROJECT PURPOSE</h2>
+    <p>This project develops an <strong>interpretable machine learning system</strong> for automatic detection of abnormal heartbeats from ECG signals using the MIT-BIH Arrhythmia Database.</p>
+    <p style="margin-top:16px;">By combining <strong>handcrafted wavelet, HOS, distance, amplitude, and RR-interval features</strong> with <strong>SHAP explainability</strong>, the system achieves high accuracy while providing transparent and clinically meaningful interpretations.</p>
+    <p class="jump-to"><a href="#core-tech"><svg class="icon"><use href="#icon-arrow-down"/></svg> Jump to Core Technology</a></p>
+</div>
+
+<!-- ═══════════════ 02 IMPLEMENTATION METHOD ═══════════════ -->
+<div class="section" id="method">
+    <h2><svg class="icon icon--lg"><use href="#icon-gear"/></svg> 02 IMPLEMENTATION METHOD</h2>
+    <div class="grid">
+        <div class="card">
+            <strong><svg class="icon"><use href="#icon-database"/></svg> Dataset</strong>
+            <ul>
+                <li>MIT-BIH Arrhythmia Database (48 records)</li>
+                <li>DS1 (train) / DS2 (test) cross-patient split</li>
+                <li>Binary classification: Normal (N, L, R) vs Abnormal (A, a, J, S, V, E, F, e, j)</li>
+                <li>Two-lead ECG: MLII + V1, 360 Hz sampling</li>
+            </ul>
+        </div>
+        <div class="card">
+            <strong><svg class="icon"><use href="#icon-chip"/></svg> Core Technology</strong>
+            <ul>
+                <li><a href="#tech-wavelet"><svg class="icon"><use href="#icon-waveform"/></svg> Wavelet + HOS + Morphological Features</a></li>
+                <li><a href="#tech-featselect"><svg class="icon"><use href="#icon-filter"/></svg> Multi-Stage Feature Selection (Top-20)</a></li>
+                <li><a href="#tech-model"><svg class="icon"><use href="#icon-bot"/></svg> Logistic Regression + SMOTE Oversampling</a></li>
+                <li><a href="#tech-shap"><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP Model Interpretability</a></li>
+                <li><a href="#tech-preprocess"><svg class="icon"><use href="#icon-wrench"/></svg> Signal Preprocessing Pipeline</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ 02.5 CORE TECHNOLOGY — DETAILED VIEW ═══════════════ -->
+<div class="section" id="core-tech">
+    <h2><svg class="icon icon--lg"><use href="#icon-info"/></svg> 02.5 CORE TECHNOLOGY — DETAILED VIEW</h2>
+    <p style="margin-bottom:12px;color:#4a5568;">
+        <svg class="icon"><use href="#icon-hand"/></svg> Click each technology to expand for details and key code definitions.
+    </p>
+
+    <!-- Tech 1: Preprocessing -->
+    <details class="tech-detail" id="tech-preprocess">
+        <summary class="tech-summary">
+            <svg class="icon"><use href="#icon-wrench"/></svg> Signal Preprocessing Pipeline
+        </summary>
+        <div class="tech-body">
+            <h4><svg class="icon"><use href="#icon-cube"/></svg> Technologies Used</h4>
+            <ul>
+                <li><strong>scipy.signal.butter + filtfilt</strong> — Butterworth bandpass filter (0.5–40 Hz), zero-phase forward/backward filtering</li>
+                <li><strong>scipy.ndimage.median_filter</strong> — Double median filter for baseline wander removal (71-sample QRS removal + 215-sample P/T wave removal)</li>
+            </ul>
+            <h4><svg class="icon"><use href="#icon-code"/></svg> Key Functions</h4>
+            <pre><code>def bandpass_filter(signal, fs, lowcut=0.5, highcut=40.0, order=4):
+    """Apply Butterworth bandpass filter to ECG signal."""
+    nyquist = 0.5 * fs
+    low, high = lowcut / nyquist, highcut / nyquist
+    b, a = sp_signal.butter(order, [low, high], btype='band')
+    filtered = np.zeros_like(signal)
+    for i in range(signal.shape[1]):
+        filtered[:, i] = sp_signal.filtfilt(b, a, signal[:, i])
+    return filtered
+
+def remove_baseline_wander(signal, fs=360):
+    """Remove baseline wander using double median filter method.
+    Step 1: 71-sample median filter removes QRS complexes
+    Step 2: 215-sample median filter removes P and T waves
+    Baseline = second filtered signal; Corrected = original - baseline
+    """
+    filtered_qrs = median_filter(channel, size=71, mode='nearest')
+    baseline = median_filter(filtered_qrs, size=215, mode='nearest')
+    return signal - baseline</code></pre>
+        </div>
+    </details>
+
+    <!-- Tech 2: Feature Extraction -->
+    <details class="tech-detail" id="tech-wavelet">
+        <summary class="tech-summary">
+            <svg class="icon"><use href="#icon-waveform"/></svg> Feature Extraction — Wavelet + HOS + Morphological + RR Intervals
+        </summary>
+        <div class="tech-body">
+            <h4><svg class="icon"><use href="#icon-cube"/></svg> Technologies Used</h4>
+            <ul>
+                <li><strong>pywt (PyWavelets)</strong> — Discrete wavelet decomposition (db1, level=3), approximation coefficients as features</li>
+                <li><strong>scipy.stats.skew / kurtosis</strong> — Higher-order statistics (HOS) features across 5 time intervals per beat</li>
+                <li><strong>numpy.linalg.norm</strong> — Euclidean distance features between P, Q, S, T fiducial points and R-peak</li>
+                <li><strong>Custom RR-interval features</strong> — pre_R, post_R, local_R (10-beat window), global_R (5-min window), RR_ratio, RR_std, RMSSD, RR_diff</li>
+            </ul>
+            <h4><svg class="icon"><use href="#icon-tag"/></svg> Feature Groups (88 total features after selection)</h4>
+            <div class="highlight-row">
+                <span class="highlight-badge"><svg class="icon"><use href="#icon-water"/></svg> Wavelet (WAV)</span>
+                <span class="highlight-badge"><svg class="icon"><use href="#icon-chart-simple"/></svg> HOS (skew+kurt)</span>
+                <span class="highlight-badge"><svg class="icon"><use href="#icon-ruler-h"/></svg> Distance (DIST)</span>
+                <span class="highlight-badge"><svg class="icon"><use href="#icon-arrow-upright"/></svg> Amplitude (AMP)</span>
+                <span class="highlight-badge"><svg class="icon"><use href="#icon-ecg"/></svg> RR-interval (RR)</span>
+            </div>
+            <h4><svg class="icon"><use href="#icon-code"/></svg> Key Functions</h4>
+            <pre><code>def extract_wavelet_features(beats, signals_used,
+                             wavelet="db1", level=3):
+    """Replicate morphology_type == 1.
+    Returns approximation coefficients from wavelet decomposition."""
+    for beat in beats:
+        for signal_idx in selected:
+            coeffs = pywt.wavedec(beat[:, signal_idx],
+                                  wavelet, level=level)
+            features.append(np.asarray(coeffs[0], dtype=float))
+    return np.vstack(rows)
+
+def extract_hos_features_matlab(beats, signals_used,
+                                window_l, window_r, n_intervals=6):
+    """Replicate morphology_type == 3/6.
+    For each of 5 intervals, extract skewness and kurtosis."""
+    lag = int(round((window_l + window_r) / n_intervals))
+    for interval_idx in range(1, n_intervals):
+        pose = lag * interval_idx
+        start, end = int(pose - lag/2), int(pose + lag/2)
+        interval = signal_data[start:end+1]
+        beat_features.append(_safe_skew(interval))
+        beat_features.append(_safe_kurtosis(interval))
+
+def extract_features_matlab_style(beats, window_l=90, window_r=90,
+    morphology_type=3, signals_used=(1,1), use_rr=False, ...):
+    """Unified entry: dispatch to raw / wavelet / HOS / distance /
+    amplitude extractors, then optionally append RR features."""</code></pre>
+        </div>
+    </details>
+
+    <!-- Tech 3: Feature Selection -->
+    <details class="tech-detail" id="tech-featselect">
+        <summary class="tech-summary">
+            <svg class="icon"><use href="#icon-filter"/></svg> Multi-Stage Feature Selection
+        </summary>
+        <div class="tech-body">
+            <h4><svg class="icon"><use href="#icon-cube"/></svg> Technologies Used</h4>
+            <ul>
+                <li><strong>sklearn.feature_selection.VarianceThreshold</strong> — Remove constant/low-variance features (threshold=0.01)</li>
+                <li><strong>Pearson correlation filter</strong> — Remove highly correlated redundant features (threshold=0.95)</li>
+                <li><strong>sklearn.linear_model.LassoCV</strong> — L1-regularized feature selection for linear classifiers (Logistic Regression, SVM)</li>
+                <li><strong>sklearn.feature_selection.SelectFromModel(RandomForest)</strong> — Tree-based importance selection for non-linear classifiers (RF, XGBoost, LightGBM)</li>
+                <li><strong>sklearn.feature_selection.RFE</strong> — Recursive feature elimination as alternative method</li>
+            </ul>
+            <h4><svg class="icon"><use href="#icon-code"/></svg> Key Functions</h4>
+            <pre><code>def run_feature_selection(features, labels, method='auto',
+    classifier_type='linear', variance_threshold=0.01,
+    correlation_threshold=0.95, cv=5):
+    """3-stage pipeline:
+    1. VarianceThreshold → remove near-constant features
+    2. Correlation filter → drop redundant features (r > 0.95)
+    3. Final selection → LassoCV (linear) or
+       SelectFromModel(RF) / RFE (non-linear)
+    Returns: selected matrix, indices, pipeline_info dict
+    """
+
+def select_with_lassocv(X, y, cv=5):
+    """Select features where LassoCV coef_ != 0.
+    Input X should be pre-standardized."""
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    lasso = LassoCV(cv=cv, max_iter=10000).fit(X_scaled, y)
+    selected_indices = np.where(lasso.coef_ != 0)[0].tolist()
+    return X[:, selected_indices], selected_indices</code></pre>
+        </div>
+    </details>
+
+    <!-- Tech 4: Model Training -->
+    <details class="tech-detail" id="tech-model">
+        <summary class="tech-summary">
+            <svg class="icon"><use href="#icon-bot"/></svg> Model Training &amp; Class Imbalance Handling
+        </summary>
+        <div class="tech-body">
+            <h4><svg class="icon"><use href="#icon-cube"/></svg> Technologies Used</h4>
+            <ul>
+                <li><strong>sklearn.linear_model.LogisticRegression</strong> — Primary classifier (C=0.5, L2 penalty, max_iter=1000)</li>
+                <li><strong>sklearn.ensemble.RandomForestClassifier</strong> — Ensemble baseline (n_estimators=100, max_depth=10)</li>
+                <li><strong>xgboost.XGBClassifier</strong> — Gradient boosting (max_depth=5, reg_alpha=0.1)</li>
+                <li><strong>lightgbm.LGBMClassifier</strong> — LightGBM (num_leaves=31, min_child_samples=20)</li>
+                <li><strong>sklearn.svm.SVC</strong> — RBF kernel SVM with probability estimates</li>
+                <li><strong>imblearn.over_sampling.SMOTE</strong> — Synthetic Minority Oversampling (k_neighbors=5, ratio=0.8)</li>
+                <li><strong>imblearn.over_sampling.BorderlineSMOTE</strong> — Borderline variant</li>
+                <li><strong>imblearn.over_sampling.ADASYN</strong> — Adaptive synthetic sampling</li>
+                <li><strong>imblearn.pipeline.Pipeline</strong> — Combined sampling + classifier pipeline</li>
+                <li><strong>sklearn.preprocessing.StandardScaler</strong> — Feature standardization</li>
+                <li><strong>sklearn.model_selection.StratifiedKFold</strong> — Stratified cross-validation</li>
+                <li><strong>sklearn.metrics</strong> — accuracy, precision, recall, f1, roc_auc, confusion_matrix</li>
+            </ul>
+            <h4><svg class="icon"><use href="#icon-code"/></svg> Key Functions</h4>
+            <pre><code>def create_classifiers(random_state=42):
+    return {
+        'logistic_regression': LogisticRegression(
+            C=0.5, penalty='l2', max_iter=1000),
+        'random_forest': RandomForestClassifier(
+            n_estimators=100, max_depth=10),
+        'xgboost': XGBClassifier(
+            n_estimators=100, max_depth=5, learning_rate=0.1,
+            subsample=0.8, colsample_bytree=0.8),
+        'lightgbm': lgb.LGBMClassifier(
+            num_leaves=31, min_child_samples=20),
+        'svm': SVC(kernel='rbf', C=1.0, probability=True),
+    }
+
+def train_with_smote(X_train, y_train, classifiers=None,
+                     sampling_strategy='auto', k_neighbors=5):
+    """Train each classifier inside an imblearn Pipeline
+    with SMOTE oversampling."""
+    for name, clf in classifiers.items():
+        smote = SMOTE(sampling_strategy=sampling_strategy,
+                      random_state=42, k_neighbors=k_neighbors)
+        pipeline = ImbPipeline([
+            ('sampler', smote),
+            ('classifier', clf)
+        ])
+        pipeline.fit(X_train, y_train)</code></pre>
+        </div>
+    </details>
+
+    <!-- Tech 5: SHAP -->
+    <details class="tech-detail" id="tech-shap">
+        <summary class="tech-summary">
+            <svg class="icon"><use href="#icon-search-chart"/></svg> SHAP Model Interpretability
+        </summary>
+        <div class="tech-body">
+            <h4><svg class="icon"><use href="#icon-cube"/></svg> Technologies Used</h4>
+            <ul>
+                <li><strong>shap.TreeExplainer</strong> — Fast exact SHAP for tree-based models (RF, XGBoost, LightGBM, GBM)</li>
+                <li><strong>shap.LinearExplainer</strong> — SHAP for linear models (Logistic Regression, SVM with linear kernel)</li>
+                <li><strong>shap.KernelExplainer</strong> — Model-agnostic fallback for any black-box model</li>
+                <li><strong>shap.summary_plot</strong> — Global feature importance dot-plot (SHAP value distribution per feature)</li>
+                <li><strong>shap.dependence_plot</strong> — Single-feature SHAP vs feature value (interaction detection)</li>
+                <li><strong>shap.force_plot</strong> — Single-instance local explanation (base value + feature push/pull)</li>
+            </ul>
+            <h4><svg class="icon"><use href="#icon-code"/></svg> Key Functions</h4>
+            <pre><code>def select_explainer(model, X, model_type='auto'):
+    """Auto-detect model type and return the right SHAP explainer."""
+    model_class = type(model).__name__.lower()
+    if any(t in model_class for t in
+           ['forest','tree','xgboost','lgbm','gradientboosting']):
+        return shap.TreeExplainer(model)
+    elif any(l in model_class for l in ['logistic','linear','svc']):
+        background = shap.sample(X, 100)
+        return shap.LinearExplainer(model, background)
+    else:
+        background = shap.sample(X, 100)
+        return shap.KernelExplainer(model.predict, background)
+
+def analyze_feature_importance(shap_values, feature_names):
+    """Rank features by mean(|SHAP|) across all samples."""
+    shap_mean = np.mean(np.abs(shap_values), axis=0)
+    return pd.DataFrame({
+        'feature': feature_names,
+        'mean_abs_shap': shap_mean
+    }).sort_values('mean_abs_shap', ascending=False)</code></pre>
+            <h4><svg class="icon"><use href="#icon-image"/></svg> SHAP Visualization Outputs</h4>
+            <ul>
+                <li><code>shap_summary.png</code> — Dot-plot of SHAP values for all features</li>
+                <li><code>shap_bar.png</code> — Bar chart of mean absolute SHAP values</li>
+                <li><code>shap_dependence_{feature}.png</code> — Per-feature dependence plots (top 5)</li>
+                <li><code>shap_force_instance_{i}.png</code> — Individual prediction explanations (3 samples)</li>
+                <li><code>feature_importance.csv</code> — Ranked feature importance table</li>
+            </ul>
+        </div>
+    </details>
+
+    <!-- Tech 6: Data Loading -->
+    <details class="tech-detail" id="tech-dataload">
+        <summary class="tech-summary">
+            <svg class="icon"><use href="#icon-hdd"/></svg> Data Loading &amp; Beat Extraction
+        </summary>
+        <div class="tech-body">
+            <h4><svg class="icon"><use href="#icon-cube"/></svg> Technologies Used</h4>
+            <ul>
+                <li><strong>Python csv module</strong> — Parse MIT-BIH CSV signal files (MLII + V1 columns)</li>
+                <li><strong>numpy</strong> — Signal array construction, zero-padding for edge beats</li>
+                <li><strong>tqdm</strong> — Progress bar for loading 48 records</li>
+            </ul>
+            <h4><svg class="icon"><use href="#icon-code"/></svg> Key Functions</h4>
+            <pre><code>def load_mitdb(data_path=None, records=None):
+    """Load MIT-BIH records from CSV format.
+    Each record has a {n}.csv (signal) and
+    {n}annotations.txt (beat labels + R-peak positions).
+    Returns dict: {rec_num: {signal, annotation, fs, ...}}
+    """
+
+def extract_beats(data_dict, window_size=180):
+    """Extract 181-sample windows around each R-peak annotation.
+    Filters to AAMI-standard beat symbols (N,L,R,e,j,A,a,J,S,V,E,F).
+    Zero-pads beats at signal edges."""
+    for rec_id, rec_data in data_dict.items():
+        for i, sample in enumerate(annotation['sample']):
+            start = max(0, sample - window_size // 2)
+            end = min(signal.shape[0], sample + window_size // 2)
+            beat = np.pad(signal[start:end],
+                          ((pad_before, pad_after), (0, 0)),
+                          mode='constant')
+
+def load_and_split_mitdb(data_path=None, reduced_DS=True):
+    """Load and split into DS1 (train, 22 records) and
+    DS2 (test, 22 records) as per the inter-patient paradigm.
+    reduced_DS=True uses the 18+18 record MLII+V1 subset."""
+    DS1_list = [101,106,108,109,112,115,118,119,201,203,
+                205,207,208,209,215,220,223,230]
+    DS2_list = [105,111,113,121,200,202,210,212,213,214,
+                219,221,222,228,231,232,233,234]</code></pre>
+        </div>
+    </details>
+</div>
+
+<!-- ═══════════════ 03 EXPERIMENTAL PROCEDURE ═══════════════ -->
+<div class="section" id="procedure">
+    <h2><svg class="icon icon--lg"><use href="#icon-list-num"/></svg> 03 EXPERIMENTAL PROCEDURE</h2>
+    <ol>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-hdd"/></svg> <strong>Data Loading</strong></span> — Read 48 MIT-BIH records from CSV, parse MLII + V1 signals and beat annotations</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-wrench"/></svg> <strong>Signal Preprocessing</strong></span> — Double median filter baseline removal + 0.5–40 Hz Butterworth bandpass filter</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-scissors"/></svg> <strong>Beat Segmentation</strong></span> — Extract 181-sample windows around R-peaks (90 left, 90 right), filter to valid AAMI beat types</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-waveform"/></svg> <strong>Feature Extraction</strong></span> — Wavelet (db1, L3 approx coeffs) + HOS (5-interval skew/kurtosis) + Distance (P-Q-S-T fiducial) + Amplitude + RR-interval (8 temporal features)</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-filter"/></svg> <strong>Feature Selection</strong></span> — VarianceThreshold → Correlation filter → LassoCV (for linear classifier), reducing to top informative features</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-ruler"/></svg> <strong>Standardization + DS1/DS2 Split</strong></span> — StandardScaler + inter-patient train/test split (18 DS1 records / 18 DS2 records)</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-balance"/></svg> <strong>Class Imbalance Handling</strong></span> — SMOTE (k=5, ratio=0.8) and BorderlineSMOTE on training set only</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-bot"/></svg> <strong>Model Training</strong></span> — Logistic Regression (C=0.5, L2) as primary model; RF, XGBoost, LightGBM, SVM as baselines</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-check-square"/></svg> <strong>Evaluation</strong></span> — Accuracy, precision, recall, F1, AUC on DS2 test set (strictly unseen patients)</li>
+        <li><span class="inline-icon"><svg class="icon"><use href="#icon-search-chart"/></svg> <strong>SHAP Analysis</strong></span> — TreeExplainer/LinearExplainer → summary, bar, dependence, force plots for global + local interpretability</li>
+    </ol>
+    <p class="jump-to"><a href="#core-tech"><svg class="icon"><use href="#icon-arrow-up"/></svg> Jump to Core Technology details</a></p>
+</div>
+
+<!-- ═══════════════ 04 INNOVATION POINTS ═══════════════ -->
+<div class="section" id="innovation">
+    <h2><svg class="icon icon--lg"><use href="#icon-bulb"/></svg> 04 INNOVATION POINTS</h2>
+    <div class="grid">
+        <div class="card">
+            <strong><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP Interpretability</strong>
+            <p>Integrated SHAP (SHapley Additive exPlanations) to analyze feature contributions. The model primarily relies on wavelet morphology and RR rhythm features, providing clear and physiologically meaningful explanations. Force plots enable per-beat clinical review.</p>
+            <p style="margin-top:8px;"><a href="#tech-shap"><svg class="icon"><use href="#icon-arrow-right"/></svg> View SHAP details</a></p>
+        </div>
+        <div class="card">
+            <strong><svg class="icon"><use href="#icon-star"/></svg> System Advantages</strong>
+            <ul>
+                <li><strong>95.92% accuracy</strong> on DS2 (unseen patients)</li>
+                <li>Strong cross-patient generalization (DS1/DS2 split)</li>
+                <li>Excellent interpretability via SHAP</li>
+                <li>Clinically relevant features (wavelet + RR)</li>
+                <li>Balance between accuracy and transparency</li>
+                <li>Multi-classifier comparison framework</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ 05 PERFORMANCE ═══════════════ -->
+<div class="section" id="performance">
+    <h2><svg class="icon icon--lg"><use href="#icon-chart-bar"/></svg> 05 PERFORMANCE SUMMARY</h2>
+    <div class="grid">
+        <div class="card">
+            <strong><svg class="icon"><use href="#icon-grid"/></svg> Dataset Split</strong>
+            <ul>
+                <li><strong>DS1 (Train + Val):</strong> 18 records</li>
+                <li><strong>DS2 (Test):</strong> 18 records</li>
+                <li>Strict inter-patient separation</li>
+            </ul>
+        </div>
+        <div class="card">
+            <strong><svg class="icon"><use href="#icon-trophy"/></svg> Best Model — Logistic Regression + SMOTE</strong>
+            <ul>
+                <li><span class="inline-icon"><svg class="icon"><use href="#icon-bullseye"/></svg> Accuracy: <strong>95.92%</strong></span></li>
+                <li><span class="inline-icon"><svg class="icon"><use href="#icon-star-half"/></svg> F1 Score (abnormal): <strong>0.947</strong></span></li>
+                <li><span class="inline-icon"><svg class="icon"><use href="#icon-search"/></svg> Recall (abnormal): <strong>0.965</strong></span></li>
+                <li><span class="inline-icon"><svg class="icon"><use href="#icon-chart-area"/></svg> AUC: <strong>0.987</strong></span></li>
+            </ul>
+        </div>
+        <div class="card">
+            <strong><svg class="icon"><use href="#icon-cube"/></svg> Feature Space</strong>
+            <ul>
+                <li>88 selected features (from 100+ raw)</li>
+                <li>Wavelet coeffs + HOS + Distance + Amplitude + RR</li>
+                <li>Top SHAP features: WAV + RR_ratio + HOS_skew</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ 06 TECHNOLOGY STACK ═══════════════ -->
+<div class="section" id="stack">
+    <h2><svg class="icon icon--lg"><use href="#icon-layers"/></svg> 06 TECHNOLOGY STACK</h2>
+    <div class="highlight-row">
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-python"/></svg> Python 3</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-table"/></svg> NumPy</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-chart-bar"/></svg> SciPy</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-gear"/></svg> scikit-learn</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-water"/></svg> PyWavelets</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-tree"/></svg> XGBoost</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-bolt"/></svg> LightGBM</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-balance"/></svg> imbalanced-learn</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-pie"/></svg> Matplotlib</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-floppy"/></svg> joblib</span>
+        <span class="highlight-badge"><svg class="icon"><use href="#icon-spinner"/></svg> tqdm</span>
+    </div>
+</div>
+
+</div> <!-- /container -->
+
+<div class="footer">
+    <p>
+        <svg class="icon"><use href="#icon-ecg"/></svg>
+        Interpretable ECG Classification System
+        <svg class="icon"><use href="#icon-ecg"/></svg>
+    </p>
+    <p>High Accuracy &bull; Strong Interpretability &bull; Clinical Applicability</p>
+    <p style="margin-top:16px;font-size:0.8rem;">
+        <a href="#purpose"><svg class="icon"><use href="#icon-arrow-up"/></svg> Back to top</a>
+    </p>
+</div>
+
+</body>
+</html>
