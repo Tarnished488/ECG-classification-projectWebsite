@@ -168,6 +168,147 @@
         }
         .stat-label { font-size: 0.75rem; opacity: 0.7; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
 
+        /* ── Model Comparison Table ── */
+        .model-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.85rem;
+        }
+        .model-table thead th {
+            background: #1a202c;
+            color: #cbd5e0;
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.78rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #4a5568;
+        }
+        .model-table tbody td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .model-table tbody tr:hover {
+            background: #edf2f7;
+        }
+        .model-table tbody tr.row--best {
+            background: #f0fff4;
+            font-weight: 600;
+        }
+        .model-table tbody tr.row--best td:first-child {
+            border-left: 4px solid #38a169;
+        }
+        .model-table .model-name {
+            text-align: left;
+            font-weight: 500;
+        }
+        .badge--best {
+            display: inline-block;
+            background: #38a169;
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-left: 6px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            vertical-align: middle;
+        }
+
+        /* ── Confusion Matrix Table ── */
+        .cm-wrapper {
+            display: flex;
+            gap: 32px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+        .cm-table {
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 360px;
+        }
+        .cm-table th, .cm-table td {
+            padding: 16px 20px;
+            text-align: center;
+            border: 2px solid #cbd5e0;
+        }
+        .cm-table .cm-header {
+            background: #1a202c;
+            color: #cbd5e0;
+            font-weight: 600;
+            font-size: 0.78rem;
+            letter-spacing: 0.5px;
+        }
+        .cm-table .cm-label {
+            background: #2d3748;
+            color: #fff;
+            font-weight: 600;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .cm-cell {
+            font-weight: 700;
+            font-size: 1.1rem;
+            position: relative;
+        }
+        .cm-cell .cm-count {
+            font-size: 1.3rem;
+            display: block;
+        }
+        .cm-cell .cm-tag {
+            font-size: 0.7rem;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+        .cm-cell--tn {
+            background: #bee3f8;
+            color: #2a4365;
+        }
+        .cm-cell--fp {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        .cm-cell--fn {
+            background: #feebc8;
+            color: #744210;
+        }
+        .cm-cell--tp {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .cm-metrics {
+            font-size: 0.85rem;
+            line-height: 2;
+            min-width: 280px;
+        }
+        .cm-metrics strong {
+            color: #2d3748;
+        }
+
+        /* ── Chart container ── */
+        .chart-container {
+            margin-top: 20px;
+            max-width: 700px;
+        }
+        .chart-container canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        /* ── Section divider ── */
+        .section-note {
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-left: 4px solid #4a5568;
+        }
+
         .back-link {
             display: inline-flex; align-items: center; gap: 5px;
             margin-top: 16px; font-size: 0.85rem;
@@ -276,6 +417,9 @@
             Performance Analysis
         </span>
         <a href="#overview"><svg class="icon"><use href="#icon-info"/></svg> Overview</a>
+        <a href="#model-comparison"><svg class="icon"><use href="#icon-chart-bar"/></svg> Model Comparison</a>
+        <a href="#confusion-matrix"><svg class="icon"><use href="#icon-grid"/></svg> Confusion Matrix</a>
+        <a href="#tp-fp-chart"><svg class="icon"><use href="#icon-chart-bar"/></svg> TP/FP Chart</a>
         <a href="#shap-ds1"><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP DS1</a>
         <a href="#shap-ds2"><svg class="icon"><use href="#icon-search-chart"/></svg> SHAP DS2</a>
         <a href="index.html"><svg class="icon"><use href="#icon-arrow-left"/></svg> Back to Home</a>
@@ -307,15 +451,15 @@
             <div class="stat-label">Accuracy on DS2</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">0.947</div>
+            <div class="stat-value">0.8282</div>
             <div class="stat-label">F1 Score (Abnormal)</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">0.965</div>
+            <div class="stat-value">0.8636</div>
             <div class="stat-label">Recall (Abnormal)</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">0.987</div>
+            <div class="stat-value">0.9482</div>
             <div class="stat-label">AUC</div>
         </div>
     </div>
@@ -342,6 +486,172 @@
     </ul>
 
     <a href="index.html" class="back-link"><svg class="icon"><use href="#icon-arrow-left"/></svg> Back to Home Page</a>
+</div>
+
+<!-- ═══════════════ MODEL COMPARISON ═══════════════ -->
+<div class="section" id="model-comparison">
+    <h2><svg class="icon icon--lg"><use href="#icon-chart-bar"/></svg> MULTI-MODEL COMPARISON (Test Set — DS2)</h2>
+    <p style="color:#4a5568;margin-bottom:8px;">
+        Performance comparison of all 6 classifiers on the held-out DS2 test set (18 patients, 49,691 beats).
+        All models share identical preprocessing (Butterworth bandpass + double median filter),
+        feature set (88 MATLAB-style features → Top20 via LR coefficients), and SMOTE 0.4 oversampling.
+        Each model uses its own optimal decision threshold found via validation set F1 maximization.
+    </p>
+
+    <table class="model-table">
+        <thead>
+            <tr>
+                <th style="text-align:left;">Model</th>
+                <th>Accuracy</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1 Score</th>
+                <th>AUC</th>
+                <th>Train-Test Gap</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="row--best">
+                <td class="model-name">LogisticRegression (C=0.5)<span class="badge--best">BEST</span></td>
+                <td><strong>95.92%</strong></td>
+                <td><strong>79.56%</strong></td>
+                <td><strong>86.36%</strong></td>
+                <td><strong>0.8282</strong></td>
+                <td><strong>0.9482</strong></td>
+                <td><strong>0.0325</strong></td>
+            </tr>
+            <tr>
+                <td class="model-name">LogisticRegression (C=0.3)</td>
+                <td>95.77%</td>
+                <td>78.51%</td>
+                <td>86.57%</td>
+                <td>0.8234</td>
+                <td>0.9482</td>
+                <td>0.0370</td>
+            </tr>
+            <tr>
+                <td class="model-name">RandomForest (100 trees)</td>
+                <td>91.47%</td>
+                <td>58.37%</td>
+                <td>87.36%</td>
+                <td>0.6998</td>
+                <td>0.9527</td>
+                <td>0.2828</td>
+            </tr>
+            <tr>
+                <td class="model-name">XGBoost</td>
+                <td>88.57%</td>
+                <td>49.86%</td>
+                <td>74.74%</td>
+                <td>0.5982</td>
+                <td>0.9272</td>
+                <td>0.3928</td>
+            </tr>
+            <tr>
+                <td class="model-name">SVM (RBF kernel)</td>
+                <td>86.84%</td>
+                <td>45.57%</td>
+                <td>80.01%</td>
+                <td>0.5806</td>
+                <td>0.9194</td>
+                <td>0.3934</td>
+            </tr>
+            <tr>
+                <td class="model-name">GradientBoosting</td>
+                <td>86.85%</td>
+                <td>45.49%</td>
+                <td>78.10%</td>
+                <td>0.5749</td>
+                <td>0.9278</td>
+                <td>0.4010</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-note">
+        <strong>Key Insight:</strong> LogisticRegression achieves the best generalization (smallest Train-Test Gap = 0.0325).
+        Tree-based models (RF, XGBoost, GBDT) severely overfit on DS1, showing large gaps of 0.28–0.40.
+        SVM has the worst overall performance despite moderate recall. The simpler linear model generalizes best to unseen patients.
+    </div>
+</div>
+
+<!-- ═══════════════ CONFUSION MATRIX ═══════════════ -->
+<div class="section" id="confusion-matrix">
+    <h2><svg class="icon icon--lg"><use href="#icon-grid"/></svg> CONFUSION MATRIX — Logistic Regression (Test Set)</h2>
+    <p style="color:#4a5568;margin-bottom:8px;">
+        Confusion matrix for the best model on the DS2 test set (49,691 beats).
+        Decision threshold optimized to 0.5854 on the validation set for maximum F1.
+    </p>
+
+    <div class="cm-wrapper">
+        <table class="cm-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th class="cm-header">Predicted Normal</th>
+                    <th class="cm-header">Predicted Abnormal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="cm-label">Actual Normal</td>
+                    <td class="cm-cell cm-cell--tn">
+                        <span class="cm-count">42,778</span>
+                        <span class="cm-tag">TN</span>
+                    </td>
+                    <td class="cm-cell cm-cell--fp">
+                        <span class="cm-count">1,255</span>
+                        <span class="cm-tag">FP</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="cm-label">Actual Abnormal</td>
+                    <td class="cm-cell cm-cell--fn">
+                        <span class="cm-count">772</span>
+                        <span class="cm-tag">FN</span>
+                    </td>
+                    <td class="cm-cell cm-cell--tp">
+                        <span class="cm-count">4,886</span>
+                        <span class="cm-tag">TP</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="cm-metrics">
+            <h3 style="margin-top:0;"><svg class="icon"><use href="#icon-info"/></svg> Derived Metrics</h3>
+            <p><strong>True Negatives (TN):</strong> 42,778 — Normal correctly identified as normal</p>
+            <p><strong>False Positives (FP):</strong> 1,255 — Normal incorrectly flagged as abnormal</p>
+            <p><strong>False Negatives (FN):</strong> 772 — Abnormal missed (most critical errors)</p>
+            <p><strong>True Positives (TP):</strong> 4,886 — Abnormal correctly detected</p>
+            <hr style="border-color:#e2e8f0;margin:12px 0;">
+            <p><strong>Accuracy:</strong> (42,778 + 4,886) / 49,691 = <strong>95.92%</strong></p>
+            <p><strong>Precision:</strong> 4,886 / (4,886 + 1,255) = <strong>79.56%</strong></p>
+            <p><strong>Recall (Sensitivity):</strong> 4,886 / (4,886 + 772) = <strong>86.36%</strong></p>
+            <p><strong>Specificity:</strong> 42,778 / (42,778 + 1,255) = <strong>97.15%</strong></p>
+            <p><strong>False Positive Rate:</strong> 1,255 / (42,778 + 1,255) = <strong>2.85%</strong></p>
+            <p><strong>False Negative Rate:</strong> 772 / (4,886 + 772) = <strong>13.64%</strong></p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ TP / FP / TN / FN CHART ═══════════════ -->
+<div class="section" id="tp-fp-chart">
+    <h2><svg class="icon icon--lg"><use href="#icon-chart-bar"/></svg> TP / TN / FP / FN DISTRIBUTION</h2>
+    <p style="color:#4a5568;margin-bottom:8px;">
+        Bar chart showing the count of each confusion group for the Logistic Regression model on the DS2 test set.
+        The second chart zooms in on the error groups (TP, FP, FN) excluding the dominant TN bar for better readability.
+    </p>
+
+    <div class="chart-container">
+        <h3><svg class="icon"><use href="#icon-layers"/></svg> Full Distribution (All 4 Groups)</h3>
+        <canvas id="chartFull"></canvas>
+    </div>
+
+    <div class="chart-container" style="margin-top:32px;">
+        <h3><svg class="icon"><use href="#icon-zoom"/></svg> Error-Focused View (Excluding TN)</h3>
+        <canvas id="chartZoom"></canvas>
+    </div>
 </div>
 
 <!-- ═══════════════ SHAP — DS1 TRAINING SET ═══════════════ -->
@@ -510,7 +820,111 @@
     </p>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
+    // ── TP/FP Chart: Full Distribution ──
+    (function() {
+        const ctxFull = document.getElementById('chartFull').getContext('2d');
+        new Chart(ctxFull, {
+            type: 'bar',
+            data: {
+                labels: ['TP (True Positive)', 'TN (True Negative)', 'FP (False Positive)', 'FN (False Negative)'],
+                datasets: [{
+                    label: 'Sample Count',
+                    data: [4886, 42778, 1255, 772],
+                    backgroundColor: [
+                        'rgba(56, 161, 105, 0.85)',   // green  — TP
+                        'rgba(49, 130, 206, 0.85)',   // blue   — TN
+                        'rgba(229, 62, 62, 0.85)',    // red    — FP
+                        'rgba(221, 107, 32, 0.85)'    // orange — FN
+                    ],
+                    borderColor: [
+                        'rgba(56, 161, 105, 1)',
+                        'rgba(49, 130, 206, 1)',
+                        'rgba(229, 62, 62, 1)',
+                        'rgba(221, 107, 32, 1)'
+                    ],
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2.2,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                var pct = (ctx.raw / 49691 * 100).toFixed(1);
+                                return ctx.raw.toLocaleString() + ' samples (' + pct + '%)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Number of Samples' },
+                        ticks: { callback: function(v) { return v.toLocaleString(); } }
+                    }
+                }
+            }
+        });
+    })();
+
+    // ── TP/FP Chart: Zoomed (Excluding TN) ──
+    (function() {
+        const ctxZoom = document.getElementById('chartZoom').getContext('2d');
+        new Chart(ctxZoom, {
+            type: 'bar',
+            data: {
+                labels: ['TP (True Positive)', 'FP (False Positive)', 'FN (False Negative)'],
+                datasets: [{
+                    label: 'Sample Count',
+                    data: [4886, 1255, 772],
+                    backgroundColor: [
+                        'rgba(56, 161, 105, 0.85)',
+                        'rgba(229, 62, 62, 0.85)',
+                        'rgba(221, 107, 32, 0.85)'
+                    ],
+                    borderColor: [
+                        'rgba(56, 161, 105, 1)',
+                        'rgba(229, 62, 62, 1)',
+                        'rgba(221, 107, 32, 1)'
+                    ],
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2.2,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                var pct = (ctx.raw / 49691 * 100).toFixed(1);
+                                return ctx.raw.toLocaleString() + ' samples (' + pct + '%)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Number of Samples' },
+                        ticks: { callback: function(v) { return v.toLocaleString(); } }
+                    }
+                }
+            }
+        });
+    })();
+
+    // ── Lightbox ──
     function openLightbox(src, caption) {
         document.getElementById('lightbox-img').src = src;
         document.getElementById('lightbox-caption').textContent = caption || '';
